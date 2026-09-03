@@ -663,6 +663,21 @@ public partial class MainWindow
         SetWindowPos(_windowHandle, _separationLayerHandle, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     }
 
+    /// <summary>
+    /// Meeting apps sometimes re-order the shared window (issue #45); when the main window is no longer right below
+    /// the separation layer it would capture itself and freeze, so send it back again.
+    /// </summary>
+    public void EnsureSentToBack()
+    {
+        if (_recordingWindow == null || _separationLayerHandle == IntPtr.Zero || WindowState == WindowState.Minimized)
+            return;
+
+        if (NativeMethods.GetWindow(_windowHandle, GW_HWNDPREV) != _separationLayerHandle)
+        {
+            SendToBack();
+        }
+    }
+
     private void SetSeparationLayerPos(uint flags)
     {
         if (_separationLayerHandle == IntPtr.Zero)

@@ -32,6 +32,7 @@ public partial class RecordingWindow
     private readonly WindowOverlapDetector? _overlapDetector;
     private readonly Stopwatch _overlapClock = Stopwatch.StartNew();
     private readonly Stopwatch _wallpaperCheckClock = Stopwatch.StartNew();
+    private readonly Stopwatch _zOrderCheckClock = Stopwatch.StartNew();
     private volatile RECT[] _overlaps = Array.Empty<RECT>();
     private HwndTarget? _compositionTarget;
 
@@ -324,6 +325,12 @@ public partial class RecordingWindow
             graphics.CopyFromScreen(nativeRect.Left, nativeRect.Top, 0, 0, new Size(nativeRect.Width, nativeRect.Height));
 
             ComposeWallpaper(graphics, nativeRect);
+
+            if (_zOrderCheckClock.ElapsedMilliseconds >= 1000)
+            {
+                _mainWindow.EnsureSentToBack();
+                _zOrderCheckClock.Restart();
+            }
 
             if (_drawShadowCursor)
             {
