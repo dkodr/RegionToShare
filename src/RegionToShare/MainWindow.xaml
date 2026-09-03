@@ -141,7 +141,7 @@
           <StackPanel Margin="10,0,0,0" VerticalAlignment="Center" MaxWidth="360">
             <TextBlock Text="Window anchor" FontWeight="Bold" />
             <TextBlock TextWrapping="Wrap" Opacity="0.8"
-                       Text="Pick a cell to stick that edge or corner of the window to the screen. The anchor is kept when the size changes (resize, resolution, aspect ratio); dragging the window releases it. Click the cell again to turn it off." />
+                       Text="Sticks the window to a screen edge or corner, also after resizing. Dragging the window releases it." />
           </StackPanel>
         </StackPanel>
       </StackPanel>
