@@ -85,7 +85,52 @@ public partial class MainWindow
     public static readonly DependencyProperty InfoAreaBackgroundProperty = DependencyProperty.Register(
         nameof(InfoAreaBackground), typeof(Brush), typeof(MainWindow), new PropertyMetadata(default(Brush)));
 
+    /// <summary>
+    /// Background of the separation layer, the window the user actually sees on the desktop while sharing.
+    /// </summary>
+    public Brush? SeparationLayerBackground
+    {
+        get => (Brush?)GetValue(SeparationLayerBackgroundProperty);
+        set => SetValue(SeparationLayerBackgroundProperty, value);
+    }
+    public static readonly DependencyProperty SeparationLayerBackgroundProperty = DependencyProperty.Register(
+        nameof(SeparationLayerBackground), typeof(Brush), typeof(MainWindow), new PropertyMetadata(default(Brush)));
+
     internal IntPtr WindowHandle => _windowHandle;
+
+    /// <summary>
+    /// Wallpaper slice for a screen rectangle as a brush, or the dot pattern when the wallpaper is off or unavailable.
+    /// </summary>
+    private Brush? CreateBackgroundBrush(RECT rect)
+    {
+        if (!Settings.ShowDesktopWallpaper)
+            return BackgroundPattern;
+
+        try
+        {
+            var slice = Wallpaper.GetSlice(rect);
+
+            if (slice == null)
+                return BackgroundPattern;
+
+            var bitmapHandle = slice.GetHbitmap();
+
+            try
+            {
+                var source = Imaging.CreateBitmapSourceFromHBitmap(bitmapHandle, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                source.Freeze();
+                return new ImageBrush(source) { Stretch = Stretch.Fill };
+            }
+            finally
+            {
+                DeleteObject(bitmapHandle);
+            }
+        }
+        catch
+        {
+            return BackgroundPattern;
+        }
+    }
 
     private WallpaperCache Wallpaper
     {
@@ -94,7 +139,11 @@ public partial class MainWindow
             if (_wallpaper == null)
             {
                 _wallpaper = new WallpaperCache();
-                _wallpaper.Changed += (_, _) => UpdateInfoAreaBackground();
+                _wallpaper.Changed += (_, _) =>
+                {
+                    UpdateInfoAreaBackground();
+                    SetSeparationLayerPos(SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE);
+                };
             }
 
             return _wallpaper;
@@ -106,44 +155,11 @@ public partial class MainWindow
         if (_windowHandle == IntPtr.Zero || _recordingWindow != null)
             return;
 
-        if (!Settings.ShowDesktopWallpaper)
-        {
-            InfoAreaBackground = BackgroundPattern;
-            return;
-        }
+        GetClientRect(_windowHandle, out var client);
+        var origin = new POINT();
+        ClientToScreen(_windowHandle, ref origin);
 
-        try
-        {
-            GetClientRect(_windowHandle, out var client);
-            var origin = new POINT();
-            ClientToScreen(_windowHandle, ref origin);
-            var rect = client.Offset(origin.X, origin.Y);
-
-            var slice = Wallpaper.GetSlice(rect);
-
-            if (slice == null)
-            {
-                InfoAreaBackground = BackgroundPattern;
-                return;
-            }
-
-            var bitmapHandle = slice.GetHbitmap();
-
-            try
-            {
-                var source = Imaging.CreateBitmapSourceFromHBitmap(bitmapHandle, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-                source.Freeze();
-                InfoAreaBackground = new ImageBrush(source) { Stretch = Stretch.Fill };
-            }
-            finally
-            {
-                DeleteObject(bitmapHandle);
-            }
-        }
-        catch
-        {
-            InfoAreaBackground = BackgroundPattern;
-        }
+        InfoAreaBackground = CreateBackgroundBrush(client.Offset(origin.X, origin.Y));
     }
 
     private void OnExtendChanged(string? newValue)
@@ -333,7 +349,7 @@ public partial class MainWindow
 
     private ICollection<string> LoadResolutions()
     {
-        var defaultResolutions = new[] { @"1024x782", @"1280x1024", @"1920x1080" };
+        var defaultResolutions = new[] { @"1024x782", @"1280x720", @"1280x1024", @"1600x900", @"1920x1080", @"2560x1440", @"3840x2160" };
 
         try
         {
@@ -352,7 +368,18 @@ public partial class MainWindow
                 .Where(item => TryParseSize(item, out _))
                 .ToArray();
 
-            return resolutions.Any() ? resolutions : defaultResolutions;
+            // Defaults added in later versions are merged into an existing file, sorted by width then height.
+            var merged = resolutions.Union(defaultResolutions)
+                .OrderBy(item => TryParseSize(item, out var size) ? size.Width : 0)
+                .ThenBy(item => TryParseSize(item, out var size) ? size.Height : 0)
+                .ToArray();
+
+            if (merged.Length != resolutions.Length)
+            {
+                File.WriteAllLines(resolutionsFilePath, merged);
+            }
+
+            return merged.Any() ? merged : defaultResolutions;
         }
         catch
         {
@@ -380,7 +407,7 @@ public partial class MainWindow
         };
 
         separationLayerWindow.MouseDown += SubLayer_MouseDown;
-        BindingOperations.SetBinding(separationLayerWindow, BackgroundProperty, new Binding(nameof(BackgroundPattern)) { Source = this });
+        BindingOperations.SetBinding(separationLayerWindow, BackgroundProperty, new Binding(nameof(SeparationLayerBackground)) { Source = this });
 
         separationLayerWindow.SourceInitialized += (_, _) =>
         {
@@ -547,6 +574,7 @@ public partial class MainWindow
 
             case nameof(Settings.ShowDesktopWallpaper):
                 UpdateInfoAreaBackground();
+                SetSeparationLayerPos(SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE);
                 break;
         }
     }
@@ -559,6 +587,7 @@ public partial class MainWindow
             Application.Current.Resources["ThemeColor"] = themeColor;
             BackgroundPattern = GenerateRandomBrush(themeColor);
             InfoAreaBackground = BackgroundPattern;
+            SeparationLayerBackground = BackgroundPattern;
             UpdateInfoAreaBackground();
         }
         catch
@@ -642,6 +671,11 @@ public partial class MainWindow
         var rect = NativeWindowRect - _debugOffset;
 
         SetWindowPos(_separationLayerHandle, HWND_BOTTOM, rect.Left, rect.Top, rect.Width, rect.Height, flags);
+
+        if ((flags & SWP_HIDEWINDOW) == 0)
+        {
+            SeparationLayerBackground = CreateBackgroundBrush(rect);
+        }
     }
 
     private bool TryParseSize(string value, out SIZE size)
