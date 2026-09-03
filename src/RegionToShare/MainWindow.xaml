@@ -37,8 +37,8 @@
   </Window.Resources>
   <Grid DataContext="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}">
     <Grid x:Name="InfoArea" Background="{Binding InfoAreaBackground}">
-      <WrapPanel VerticalAlignment="Top" HorizontalAlignment="Left" Orientation="Horizontal">
-        <WrapPanel.Resources>
+      <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left">
+        <StackPanel.Resources>
           <Style TargetType="Decorator" x:Key="Padding">
             <Setter Property="Width" Value="10" />
           </Style>
@@ -75,7 +75,8 @@
             <Setter Property="Height" Value="4" />
             <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" />
           </Style>
-        </WrapPanel.Resources>
+        </StackPanel.Resources>
+        <WrapPanel Orientation="Horizontal">
         <ComboBox Text="{Binding Extend}"
                   ItemsSource="{Binding Resolutions}"
                   Width="90" IsEditable="True" />
@@ -85,7 +86,28 @@
                   ToolTip="Lock the aspect ratio of the shared region"
                   Width="60" />
         <Decorator Style="{StaticResource Padding}"/>
-        <UniformGrid x:Name="AnchorGrid" Rows="3" Columns="3" VerticalAlignment="Center"
+        <TextBox Text="{Binding ThemeColor, Source={x:Static properties:Settings.Default}, UpdateSourceTrigger=PropertyChanged}"
+                 Width="90" />
+        <Decorator Style="{StaticResource Padding}"/>
+        <ComboBox SelectedItem="{Binding FramesPerSecond, Source={x:Static properties:Settings.Default}}"
+                  ItemStringFormat="{}{0} FPS"
+                  ItemsSource="{Binding SupportedFramesPerSecond}"
+                  Width="65" />
+        <Decorator Style="{StaticResource Padding}"/>
+        <CheckBox Content="Draw shadow cursor"
+                  VerticalAlignment="Center"
+                  IsChecked="{Binding DrawShadowCursor, Source={x:Static properties:Settings.Default}}" />
+        <Decorator Style="{StaticResource Padding}"/>
+        <CheckBox Content="Start activated"
+                  VerticalAlignment="Center"
+                  IsChecked="{Binding StartActivated, Source={x:Static properties:Settings.Default}}" />
+        <Decorator Style="{StaticResource Padding}"/>
+        <CheckBox Content="Show desktop wallpaper"
+                  VerticalAlignment="Center"
+                  ToolTip="Paint the desktop wallpaper where no other window covers the shared region"
+                  IsChecked="{Binding ShowDesktopWallpaper, Source={x:Static properties:Settings.Default}}" />
+      </WrapPanel>
+        <UniformGrid x:Name="AnchorGrid" Rows="3" Columns="3" HorizontalAlignment="Left" Margin="0,4,0,0"
                      ToolTip="Stick the window to an edge or corner of the screen; dragging the window releases it">
           <ToggleButton Tag="0" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Top" />
@@ -115,28 +137,7 @@
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
           </ToggleButton>
         </UniformGrid>
-        <Decorator Style="{StaticResource Padding}"/>
-        <TextBox Text="{Binding ThemeColor, Source={x:Static properties:Settings.Default}, UpdateSourceTrigger=PropertyChanged}"
-                 Width="90" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <ComboBox SelectedItem="{Binding FramesPerSecond, Source={x:Static properties:Settings.Default}}"
-                  ItemStringFormat="{}{0} FPS"
-                  ItemsSource="{Binding SupportedFramesPerSecond}"
-                  Width="65" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <CheckBox Content="Draw shadow cursor"
-                  VerticalAlignment="Center"
-                  IsChecked="{Binding DrawShadowCursor, Source={x:Static properties:Settings.Default}}" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <CheckBox Content="Start activated"
-                  VerticalAlignment="Center"
-                  IsChecked="{Binding StartActivated, Source={x:Static properties:Settings.Default}}" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <CheckBox Content="Show desktop wallpaper"
-                  VerticalAlignment="Center"
-                  ToolTip="Paint the desktop wallpaper where no other window covers the shared region"
-                  IsChecked="{Binding ShowDesktopWallpaper, Source={x:Static properties:Settings.Default}}" />
-      </WrapPanel>
+      </StackPanel>
       <TextBlock Text="{Binding Version}" VerticalAlignment="Bottom" HorizontalAlignment="Right" Padding="5,2" />
       <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
         <Grid.RowDefinitions>
