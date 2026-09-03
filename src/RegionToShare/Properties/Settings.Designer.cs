@@ -61,7 +61,7 @@ namespace RegionToShare.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("SteelBlue")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Steel blue")]
         public string ThemeColor {
             get {
                 return ((string)(this["ThemeColor"]));
@@ -80,6 +80,54 @@ namespace RegionToShare.Properties {
             }
             set {
                 this["StartActivated"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool ShowDesktopWallpaper {
+            get {
+                return ((bool)(this["ShowDesktopWallpaper"]));
+            }
+            set {
+                this["ShowDesktopWallpaper"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("-1")]
+        public int WindowAnchor {
+            get {
+                return ((int)(this["WindowAnchor"]));
+            }
+            set {
+                this["WindowAnchor"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Free")]
+        public string AspectRatio {
+            get {
+                return ((string)(this["AspectRatio"]));
+            }
+            set {
+                this["AspectRatio"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Black")]
+        public string BackgroundColor {
+            get {
+                return ((string)(this["BackgroundColor"]));
+            }
+            set {
+                this["BackgroundColor"] = value;
             }
         }
     }
