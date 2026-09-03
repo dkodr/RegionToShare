@@ -41,6 +41,7 @@ public static class BackgroundColors
         new NamedColor("Charcoal", "#2B2B2B"),
         new NamedColor("Slate", "#3A4750"),
         new NamedColor("Navy", "#1F2A44"),
+        new NamedColor("White", "#FFFFFF"),
         new NamedColor("Mist", "#D9DEE3"),
         new NamedColor("Cream", "#FFF5E1"),
         new NamedColor("Sand", "#EAD7BB"),
