@@ -42,6 +42,14 @@
           <Style TargetType="Decorator" x:Key="Padding">
             <Setter Property="Width" Value="10" />
           </Style>
+          <DataTemplate x:Key="ColorItem">
+            <StackPanel Orientation="Horizontal">
+              <Border Width="12" Height="12" Margin="0,0,6,0" BorderThickness="1"
+                      BorderBrush="{DynamicResource {x:Static styles:ResourceKeys.BorderBrush}}"
+                      Background="{Binding Brush}" />
+              <TextBlock Text="{Binding Name}" />
+            </StackPanel>
+          </DataTemplate>
           <Style TargetType="ToggleButton" x:Key="AnchorButton">
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
@@ -86,8 +94,20 @@
                   ToolTip="Lock the aspect ratio of the shared region"
                   Width="60" />
         <Decorator Style="{StaticResource Padding}"/>
-        <TextBox Text="{Binding ThemeColor, Source={x:Static properties:Settings.Default}, UpdateSourceTrigger=PropertyChanged}"
-                 Width="90" />
+        <ComboBox SelectedValue="{Binding ThemeColor, Source={x:Static properties:Settings.Default}}"
+                  SelectedValuePath="Name"
+                  ItemsSource="{Binding ThemeColorItems}"
+                  ItemTemplate="{StaticResource ColorItem}"
+                  ToolTip="Theme color: stripes of the region frame and UI accents"
+                  Width="110" />
+        <Decorator Style="{StaticResource Padding}"/>
+        <ComboBox SelectedValue="{Binding BackgroundColor, Source={x:Static properties:Settings.Default}}"
+                  SelectedValuePath="Name"
+                  ItemsSource="{Binding BackgroundColorItems}"
+                  ItemTemplate="{StaticResource ColorItem}"
+                  ToolTip="Background color shown where nothing covers the shared region; not used while the wallpaper is on"
+                  IsEnabled="{Binding IsBackgroundColorEnabled}"
+                  Width="120" />
         <Decorator Style="{StaticResource Padding}"/>
         <ComboBox SelectedItem="{Binding FramesPerSecond, Source={x:Static properties:Settings.Default}}"
                   ItemStringFormat="{}{0} FPS"

@@ -12,7 +12,7 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="ThemeColor" Type="System.String" Scope="User">
-      <Value Profile="(Default)">SteelBlue</Value>
+      <Value Profile="(Default)">Steel blue</Value>
     </Setting>
     <Setting Name="StartActivated" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">False</Value>
@@ -25,6 +25,9 @@
     </Setting>
     <Setting Name="AspectRatio" Type="System.String" Scope="User">
       <Value Profile="(Default)">Free</Value>
+    </Setting>
+    <Setting Name="BackgroundColor" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Black</Value>
     </Setting>
   </Settings>
 </SettingsFile>

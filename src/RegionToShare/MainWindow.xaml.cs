@@ -43,6 +43,7 @@ public partial class MainWindow
         Resolutions = LoadResolutions();
         Resources.RegisterDefaultStyles();
         SetThemeColor();
+        ApplyBackgroundColor();
         Settings.PropertyChanged += Settings_PropertyChanged;
         RefreshAnchorButtons();
     }
@@ -66,13 +67,47 @@ public partial class MainWindow
         new FrameworkPropertyMetadata(default(string), FrameworkPropertyMetadataOptions.BindsTwoWayByDefault,
             (d, args) => ((MainWindow)d).OnExtendChanged(args.NewValue as string)));
 
-    public Brush BackgroundPattern
+    /// <summary>
+    /// Solid background color from the settings; used when the wallpaper is off or unavailable.
+    /// </summary>
+    public Brush BackgroundBrush
     {
-        get => (Brush)GetValue(BackgroundPatternProperty);
-        set => SetValue(BackgroundPatternProperty, value);
+        get => (Brush)GetValue(BackgroundBrushProperty);
+        set => SetValue(BackgroundBrushProperty, value);
     }
-    public static readonly DependencyProperty BackgroundPatternProperty = DependencyProperty.Register(
-        nameof(BackgroundPattern), typeof(Brush), typeof(MainWindow), new PropertyMetadata(default(Brush)));
+    public static readonly DependencyProperty BackgroundBrushProperty = DependencyProperty.Register(
+        nameof(BackgroundBrush), typeof(Brush), typeof(MainWindow), new PropertyMetadata(Brushes.Black));
+
+    public static IReadOnlyList<NamedColor> BackgroundColorItems => BackgroundColors.Items;
+
+    public static IReadOnlyList<NamedColor> ThemeColorItems => ThemeColors.Items;
+
+    /// <summary>
+    /// The solid background color only matters while the wallpaper is off.
+    /// </summary>
+    public bool IsBackgroundColorEnabled
+    {
+        get => (bool)GetValue(IsBackgroundColorEnabledProperty);
+        set => SetValue(IsBackgroundColorEnabledProperty, value);
+    }
+    public static readonly DependencyProperty IsBackgroundColorEnabledProperty = DependencyProperty.Register(
+        nameof(IsBackgroundColorEnabled), typeof(bool), typeof(MainWindow), new PropertyMetadata(true));
+
+    private void ApplyBackgroundColor()
+    {
+        var color = BackgroundColors.Get(Settings.BackgroundColor);
+
+        BackgroundBrush = color.Brush;
+        Background = color.Brush;
+        // On the wallpaper the text stays white; the wallpaper is unknown, the solid color is not.
+        Foreground = Settings.ShowDesktopWallpaper ? Brushes.White : color.Foreground;
+        IsBackgroundColorEnabled = !Settings.ShowDesktopWallpaper;
+        InfoAreaBackground = color.Brush;
+        SeparationLayerBackground = color.Brush;
+
+        UpdateInfoAreaBackground();
+        SetSeparationLayerPos(SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE);
+    }
 
     /// <summary>
     /// Background of the info area: the wallpaper slice under the window when enabled, else the dot pattern.
@@ -104,14 +139,14 @@ public partial class MainWindow
     private Brush? CreateBackgroundBrush(RECT rect)
     {
         if (!Settings.ShowDesktopWallpaper)
-            return BackgroundPattern;
+            return BackgroundBrush;
 
         try
         {
             var slice = Wallpaper.GetSlice(rect);
 
             if (slice == null)
-                return BackgroundPattern;
+                return BackgroundBrush;
 
             var bitmapHandle = slice.GetHbitmap();
 
@@ -128,7 +163,7 @@ public partial class MainWindow
         }
         catch
         {
-            return BackgroundPattern;
+            return BackgroundBrush;
         }
     }
 
@@ -530,13 +565,14 @@ public partial class MainWindow
                 settings.WindowAnchor = (int)WindowAnchor.None;
             }
 
-            try
+            if (!BackgroundColors.IsValid(settings.BackgroundColor))
             {
-                ColorConverter.ConvertFromString(settings.ThemeColor);
+                settings.BackgroundColor = BackgroundColors.Default;
             }
-            catch
+
+            if (!ThemeColors.IsValid(settings.ThemeColor))
             {
-                settings.ThemeColor = nameof(Colors.SteelBlue);
+                settings.ThemeColor = ThemeColors.Default;
             }
 
             return true;
@@ -572,7 +608,13 @@ public partial class MainWindow
                 ApplyAnchorNow();
                 break;
 
+            case nameof(Settings.BackgroundColor):
+                ApplyBackgroundColor();
+                break;
+
             case nameof(Settings.ShowDesktopWallpaper):
+                Foreground = Settings.ShowDesktopWallpaper ? Brushes.White : BackgroundColors.Get(Settings.BackgroundColor).Foreground;
+                IsBackgroundColorEnabled = !Settings.ShowDesktopWallpaper;
                 UpdateInfoAreaBackground();
                 SetSeparationLayerPos(SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE | SWP_NOSIZE);
                 break;
@@ -581,19 +623,7 @@ public partial class MainWindow
 
     private void SetThemeColor()
     {
-        try
-        {
-            var themeColor = (Color)ColorConverter.ConvertFromString(Settings.ThemeColor);
-            Application.Current.Resources["ThemeColor"] = themeColor;
-            BackgroundPattern = GenerateRandomBrush(themeColor);
-            InfoAreaBackground = BackgroundPattern;
-            SeparationLayerBackground = BackgroundPattern;
-            UpdateInfoAreaBackground();
-        }
-        catch
-        {
-            // Invalid color, ignore.
-        }
+        Application.Current.Resources["ThemeColor"] = ThemeColors.Get(Settings.ThemeColor).Color;
     }
 
     protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
