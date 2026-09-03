@@ -9,6 +9,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using RegionToShare.Properties;
 using Throttle;
@@ -31,6 +32,8 @@ public partial class MainWindow
 
     private bool _isMoving;
     private bool _isSizing;
+    private bool _isRefreshingAnchorButtons;
+    private WallpaperCache? _wallpaper;
 
     public MainWindow()
     {
@@ -70,6 +73,78 @@ public partial class MainWindow
     }
     public static readonly DependencyProperty BackgroundPatternProperty = DependencyProperty.Register(
         nameof(BackgroundPattern), typeof(Brush), typeof(MainWindow), new PropertyMetadata(default(Brush)));
+
+    /// <summary>
+    /// Background of the info area: the wallpaper slice under the window when enabled, else the dot pattern.
+    /// </summary>
+    public Brush? InfoAreaBackground
+    {
+        get => (Brush?)GetValue(InfoAreaBackgroundProperty);
+        set => SetValue(InfoAreaBackgroundProperty, value);
+    }
+    public static readonly DependencyProperty InfoAreaBackgroundProperty = DependencyProperty.Register(
+        nameof(InfoAreaBackground), typeof(Brush), typeof(MainWindow), new PropertyMetadata(default(Brush)));
+
+    internal IntPtr WindowHandle => _windowHandle;
+
+    private WallpaperCache Wallpaper
+    {
+        get
+        {
+            if (_wallpaper == null)
+            {
+                _wallpaper = new WallpaperCache();
+                _wallpaper.Changed += (_, _) => UpdateInfoAreaBackground();
+            }
+
+            return _wallpaper;
+        }
+    }
+
+    private void UpdateInfoAreaBackground()
+    {
+        if (_windowHandle == IntPtr.Zero || _recordingWindow != null)
+            return;
+
+        if (!Settings.ShowDesktopWallpaper)
+        {
+            InfoAreaBackground = BackgroundPattern;
+            return;
+        }
+
+        try
+        {
+            GetClientRect(_windowHandle, out var client);
+            var origin = new POINT();
+            ClientToScreen(_windowHandle, ref origin);
+            var rect = client.Offset(origin.X, origin.Y);
+
+            var slice = Wallpaper.GetSlice(rect);
+
+            if (slice == null)
+            {
+                InfoAreaBackground = BackgroundPattern;
+                return;
+            }
+
+            var bitmapHandle = slice.GetHbitmap();
+
+            try
+            {
+                var source = Imaging.CreateBitmapSourceFromHBitmap(bitmapHandle, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+                source.Freeze();
+                InfoAreaBackground = new ImageBrush(source) { Stretch = Stretch.Fill };
+            }
+            finally
+            {
+                DeleteObject(bitmapHandle);
+            }
+        }
+        catch
+        {
+            InfoAreaBackground = BackgroundPattern;
+        }
+    }
 
     private void OnExtendChanged(string? newValue)
     {
@@ -162,21 +237,49 @@ public partial class MainWindow
         }
     }
 
-    private void AnchorButton_Click(object sender, RoutedEventArgs e)
+    // Checked/Unchecked instead of Click, so the buttons also work when toggled via UI automation or keyboard.
+    private void AnchorButton_Checked(object sender, RoutedEventArgs e)
     {
-        if (sender is not ToggleButton { Tag: string tag } button || !int.TryParse(tag, NumberStyles.Integer, CultureInfo.InvariantCulture, out var anchor))
+        if (_isRefreshingAnchorButtons || !TryGetAnchor(sender, out var anchor))
             return;
 
-        Settings.WindowAnchor = button.IsChecked == true ? anchor : (int)WindowAnchor.None;
+        Settings.WindowAnchor = anchor;
+    }
+
+    private void AnchorButton_Unchecked(object sender, RoutedEventArgs e)
+    {
+        if (_isRefreshingAnchorButtons || !TryGetAnchor(sender, out var anchor))
+            return;
+
+        if (Settings.WindowAnchor == anchor)
+        {
+            Settings.WindowAnchor = (int)WindowAnchor.None;
+        }
+    }
+
+    private static bool TryGetAnchor(object sender, out int anchor)
+    {
+        anchor = (int)WindowAnchor.None;
+
+        return sender is ToggleButton { Tag: string tag } && int.TryParse(tag, NumberStyles.Integer, CultureInfo.InvariantCulture, out anchor);
     }
 
     private void RefreshAnchorButtons()
     {
         var anchor = Settings.WindowAnchor;
 
-        foreach (var button in AnchorGrid.Children.OfType<ToggleButton>())
+        _isRefreshingAnchorButtons = true;
+
+        try
         {
-            button.IsChecked = button.Tag is string tag && int.TryParse(tag, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) && value == anchor;
+            foreach (var button in AnchorGrid.Children.OfType<ToggleButton>())
+            {
+                button.IsChecked = TryGetAnchor(button, out var value) && value == anchor;
+            }
+        }
+        finally
+        {
+            _isRefreshingAnchorButtons = false;
         }
     }
 
@@ -352,7 +455,7 @@ public partial class MainWindow
 
         ValidateSettings();
 
-        _recordingWindow = new RecordingWindow(RenderTarget, Settings.DrawShadowCursor, Settings.FramesPerSecond, _debugOffset);
+        _recordingWindow = new RecordingWindow(RenderTarget, Settings.DrawShadowCursor, Settings.FramesPerSecond, _debugOffset, Settings.ShowDesktopWallpaper ? Wallpaper : null);
 
         NativeWindowRect -= GlassFrameThickness;
 
@@ -373,6 +476,7 @@ public partial class MainWindow
 
             NativeWindowRect += GlassFrameThickness;
 
+            UpdateInfoAreaBackground();
             BringToFront();
         };
 
@@ -440,6 +544,10 @@ public partial class MainWindow
                 RefreshAnchorButtons();
                 ApplyAnchorNow();
                 break;
+
+            case nameof(Settings.ShowDesktopWallpaper):
+                UpdateInfoAreaBackground();
+                break;
         }
     }
 
@@ -450,6 +558,8 @@ public partial class MainWindow
             var themeColor = (Color)ColorConverter.ConvertFromString(Settings.ThemeColor);
             Application.Current.Resources["ThemeColor"] = themeColor;
             BackgroundPattern = GenerateRandomBrush(themeColor);
+            InfoAreaBackground = BackgroundPattern;
+            UpdateInfoAreaBackground();
         }
         catch
         {
@@ -483,6 +593,14 @@ public partial class MainWindow
         Settings.Save();
     }
 
+    protected override void OnClosed(EventArgs e)
+    {
+        base.OnClosed(e);
+
+        _wallpaper?.Dispose();
+        _wallpaper = null;
+    }
+
     [Throttled(typeof(DispatcherThrottle), (int)DispatcherPriority.Normal)]
     private void UpdateSizeAndPos()
     {
@@ -495,6 +613,8 @@ public partial class MainWindow
         Extend = rect.Width + "x" + rect.Height;
 
         SetSeparationLayerPos(SWP_NOACTIVATE | SWP_NOZORDER);
+
+        UpdateInfoAreaBackground();
     }
 
     private void SubLayer_MouseDown(object sender, MouseButtonEventArgs e)

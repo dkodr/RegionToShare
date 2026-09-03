@@ -36,7 +36,7 @@
     <SolidColorBrush x:Key="{x:Static styles:ResourceKeys.DisabledBrush}" Color="#2D2D30" />
   </Window.Resources>
   <Grid DataContext="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}">
-    <Grid x:Name="InfoArea" Background="{Binding BackgroundPattern}">
+    <Grid x:Name="InfoArea" Background="{Binding InfoAreaBackground}">
       <WrapPanel VerticalAlignment="Top" HorizontalAlignment="Left" Orientation="Horizontal">
         <WrapPanel.Resources>
           <Style TargetType="Decorator" x:Key="Padding">
@@ -87,31 +87,31 @@
         <Decorator Style="{StaticResource Padding}"/>
         <UniformGrid x:Name="AnchorGrid" Rows="3" Columns="3" VerticalAlignment="Center"
                      ToolTip="Stick the window to an edge or corner of the screen; dragging the window releases it">
-          <ToggleButton Tag="0" Style="{StaticResource AnchorButton}" Click="AnchorButton_Click">
+          <ToggleButton Tag="0" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Top" />
           </ToggleButton>
-          <ToggleButton Tag="1" Style="{StaticResource AnchorButton}" Click="AnchorButton_Click">
+          <ToggleButton Tag="1" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Center" VerticalAlignment="Top" />
           </ToggleButton>
-          <ToggleButton Tag="2" Style="{StaticResource AnchorButton}" Click="AnchorButton_Click">
+          <ToggleButton Tag="2" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Top" />
           </ToggleButton>
-          <ToggleButton Tag="3" Style="{StaticResource AnchorButton}" Click="AnchorButton_Click">
+          <ToggleButton Tag="3" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Center" />
           </ToggleButton>
-          <ToggleButton Tag="4" Style="{StaticResource AnchorButton}" Click="AnchorButton_Click">
+          <ToggleButton Tag="4" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Center" VerticalAlignment="Center" />
           </ToggleButton>
-          <ToggleButton Tag="5" Style="{StaticResource AnchorButton}" Click="AnchorButton_Click">
+          <ToggleButton Tag="5" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Center" />
           </ToggleButton>
-          <ToggleButton Tag="6" Style="{StaticResource AnchorButton}" Click="AnchorButton_Click">
+          <ToggleButton Tag="6" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
           </ToggleButton>
-          <ToggleButton Tag="7" Style="{StaticResource AnchorButton}" Click="AnchorButton_Click">
+          <ToggleButton Tag="7" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
           </ToggleButton>
-          <ToggleButton Tag="8" Style="{StaticResource AnchorButton}" Click="AnchorButton_Click">
+          <ToggleButton Tag="8" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
             <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
           </ToggleButton>
         </UniformGrid>

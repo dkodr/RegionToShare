@@ -1,4 +1,6 @@
-﻿using System.Drawing;
+﻿using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Windows;
 using System.Windows.Controls.Primitives;
@@ -26,6 +28,11 @@ public partial class RecordingWindow
     private readonly Image _renderTarget;
     private readonly bool _drawShadowCursor;
     private readonly POINT _debugOffset;
+    private readonly WallpaperCache? _wallpaper;
+    private readonly WindowOverlapDetector? _overlapDetector;
+    private readonly Stopwatch _overlapClock = Stopwatch.StartNew();
+    private readonly Stopwatch _wallpaperCheckClock = Stopwatch.StartNew();
+    private volatile RECT[] _overlaps = Array.Empty<RECT>();
     private HwndTarget? _compositionTarget;
 
     private RECT _nativeMainWindowRect;
@@ -34,7 +41,7 @@ public partial class RecordingWindow
     private bool _isMoving;
     private bool _isSizing;
 
-    public RecordingWindow(Image renderTarget, bool drawShadowCursor, int framesPerSecond, POINT debugOffset)
+    public RecordingWindow(Image renderTarget, bool drawShadowCursor, int framesPerSecond, POINT debugOffset, WallpaperCache? wallpaper)
     {
         InitializeComponent();
 
@@ -42,6 +49,12 @@ public partial class RecordingWindow
         _renderTarget = renderTarget;
         _drawShadowCursor = drawShadowCursor;
         _debugOffset = debugOffset;
+        _wallpaper = wallpaper;
+
+        if (wallpaper != null)
+        {
+            _overlapDetector = new WindowOverlapDetector(_mainWindow.WindowHandle);
+        }
 
         _timer = new HighResolutionTimer(Timer_Tick, TimeSpan.FromSeconds(1.0 / framesPerSecond));
         _timer.Start();
@@ -243,12 +256,60 @@ public partial class RecordingWindow
 
         try
         {
+            // Window enumeration is cheap and thread safe; refreshing it every ~100 ms keeps the UI thread free.
+            if (_overlapDetector != null && _overlapClock.ElapsedMilliseconds >= 100)
+            {
+                _overlaps = _overlapDetector.Snapshot();
+                _overlapClock.Restart();
+            }
+
             Dispatcher.BeginInvoke(Timer_Tick);
         }
         catch
         {
             // Window already unloaded
         }
+    }
+
+    /// <summary>
+    /// Paints the wallpaper into the parts of the frame that no other window covers; those parts would otherwise show the main window itself.
+    /// </summary>
+    private void ComposeWallpaper(Graphics graphics, RECT nativeRect)
+    {
+        if (_wallpaper == null)
+            return;
+
+        if (_wallpaperCheckClock.ElapsedMilliseconds >= 5000)
+        {
+            _wallpaper.CheckForChanges();
+            _wallpaperCheckClock.Restart();
+        }
+
+        var slice = _wallpaper.GetSlice(nativeRect);
+
+        if (slice == null)
+            return;
+
+        graphics.SetClip(new Rectangle(0, 0, nativeRect.Width, nativeRect.Height));
+
+        foreach (var overlap in _overlaps)
+        {
+            var covered = overlap.Intersect(nativeRect);
+
+            if (covered.IsEmpty)
+                continue;
+
+            graphics.ExcludeClip((Rectangle)covered.Offset(-nativeRect.Left, -nativeRect.Top));
+        }
+
+        if (!graphics.IsVisibleClipEmpty)
+        {
+            graphics.CompositingMode = CompositingMode.SourceCopy;
+            graphics.DrawImageUnscaled(slice, 0, 0);
+            graphics.CompositingMode = CompositingMode.SourceOver;
+        }
+
+        graphics.ResetClip();
     }
 
     private void Timer_Tick()
@@ -261,6 +322,8 @@ public partial class RecordingWindow
             using var graphics = Graphics.FromImage(bitmap);
 
             graphics.CopyFromScreen(nativeRect.Left, nativeRect.Top, 0, 0, new Size(nativeRect.Width, nativeRect.Height));
+
+            ComposeWallpaper(graphics, nativeRect);
 
             if (_drawShadowCursor)
             {

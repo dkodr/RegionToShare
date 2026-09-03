@@ -1,3 +1,8 @@
+1.12
+- Fix #49: Optionally show the desktop wallpaper instead of the black background in the parts of the region that no other window covers ("Show desktop wallpaper").
+- Window anchor: a 3x3 grid pins the window to an edge or corner of the screen; the anchor is kept when the size changes and released when the window is dragged.
+- Aspect ratio lock (16:9, 3:2, 4:3), applied while resizing and when a resolution is entered; window edges snap to the screen edges while resizing.
+
 1.11
 - Fix #80: Support native ARM64, contributed by Stefan Forstenlechner <stefan@forstenlechner.dev>
 - Fix #79: Do not default to start activated
