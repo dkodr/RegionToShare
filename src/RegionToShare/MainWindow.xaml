@@ -37,19 +37,24 @@
   </Window.Resources>
   <Grid DataContext="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}">
     <Grid x:Name="InfoArea" Background="{Binding InfoAreaBackground}">
-      <StackPanel VerticalAlignment="Top" HorizontalAlignment="Left" Margin="10">
-        <StackPanel.Resources>
-          <Style TargetType="Decorator" x:Key="Padding">
-            <Setter Property="Width" Value="10" />
+      <WrapPanel x:Name="OptionsPanel" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="10"
+                 Background="Transparent" MouseLeftButtonDown="OptionsPanel_MouseLeftButtonDown">
+        <WrapPanel.Resources>
+          <Style TargetType="Border" x:Key="Section">
+            <Setter Property="Background" Value="#66000000" />
+            <Setter Property="CornerRadius" Value="4" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,0,10,10" />
+            <Setter Property="VerticalAlignment" Value="Top" />
           </Style>
-          <DataTemplate x:Key="ColorItem">
-            <StackPanel Orientation="Horizontal">
-              <Border Width="12" Height="12" Margin="0,0,6,0" BorderThickness="1"
-                      BorderBrush="{DynamicResource {x:Static styles:ResourceKeys.BorderBrush}}"
-                      Background="{Binding Brush}" />
-              <TextBlock Text="{Binding Name}" />
-            </StackPanel>
-          </DataTemplate>
+          <Style TargetType="TextBlock" x:Key="SectionHeader">
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+          </Style>
+          <Style TargetType="TextBlock" x:Key="Label">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+          </Style>
           <Style TargetType="ToggleButton" x:Key="AnchorButton">
             <Setter Property="Width" Value="20" />
             <Setter Property="Height" Value="20" />
@@ -83,88 +88,154 @@
             <Setter Property="Height" Value="6" />
             <Setter Property="Fill" Value="{Binding Foreground, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Window}}}" />
           </Style>
-        </StackPanel.Resources>
-        <WrapPanel Orientation="Horizontal">
-        <ComboBox Text="{Binding Extend}"
-                  ItemsSource="{Binding Resolutions}"
-                  Width="90" IsEditable="True" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <ComboBox SelectedItem="{Binding AspectRatio, Source={x:Static properties:Settings.Default}}"
-                  ItemsSource="{Binding AspectRatios}"
-                  ToolTip="Lock the aspect ratio of the shared region"
-                  Width="60" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <ComboBox SelectedValue="{Binding ThemeColor, Source={x:Static properties:Settings.Default}}"
-                  SelectedValuePath="Name"
-                  ItemsSource="{Binding ThemeColorItems}"
-                  ItemTemplate="{StaticResource ColorItem}"
-                  ToolTip="Theme color: stripes of the region frame and UI accents"
-                  Width="110" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <ComboBox SelectedValue="{Binding BackgroundColor, Source={x:Static properties:Settings.Default}}"
-                  SelectedValuePath="Name"
-                  ItemsSource="{Binding BackgroundColorItems}"
-                  ItemTemplate="{StaticResource ColorItem}"
-                  ToolTip="Background color shown where nothing covers the shared region; not used while the wallpaper is on"
-                  IsEnabled="{Binding IsBackgroundColorEnabled}"
-                  Width="120" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <ComboBox SelectedItem="{Binding FramesPerSecond, Source={x:Static properties:Settings.Default}}"
-                  ItemStringFormat="{}{0} FPS"
-                  ItemsSource="{Binding SupportedFramesPerSecond}"
-                  Width="65" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <CheckBox Content="Draw shadow cursor"
-                  VerticalAlignment="Center"
-                  IsChecked="{Binding DrawShadowCursor, Source={x:Static properties:Settings.Default}}" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <CheckBox Content="Start activated"
-                  VerticalAlignment="Center"
-                  IsChecked="{Binding StartActivated, Source={x:Static properties:Settings.Default}}" />
-        <Decorator Style="{StaticResource Padding}"/>
-        <CheckBox Content="Show desktop wallpaper"
-                  VerticalAlignment="Center"
-                  ToolTip="Paint the desktop wallpaper where no other window covers the shared region"
-                  IsChecked="{Binding ShowDesktopWallpaper, Source={x:Static properties:Settings.Default}}" />
-      </WrapPanel>
-        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-          <UniformGrid x:Name="AnchorGrid" Rows="3" Columns="3" VerticalAlignment="Top"
-                       ToolTip="Stick the window to an edge or corner of the screen; dragging the window releases it">
-            <ToggleButton Tag="0" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
-              <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Top" />
-            </ToggleButton>
-            <ToggleButton Tag="1" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
-              <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Center" VerticalAlignment="Top" />
-            </ToggleButton>
-            <ToggleButton Tag="2" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
-              <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Top" />
-            </ToggleButton>
-            <ToggleButton Tag="3" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
-              <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Center" />
-            </ToggleButton>
-            <ToggleButton Tag="4" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
-              <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Center" VerticalAlignment="Center" />
-            </ToggleButton>
-            <ToggleButton Tag="5" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
-              <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Center" />
-            </ToggleButton>
-            <ToggleButton Tag="6" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
-              <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
-            </ToggleButton>
-            <ToggleButton Tag="7" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
-              <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
-            </ToggleButton>
-            <ToggleButton Tag="8" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
-              <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
-            </ToggleButton>
-          </UniformGrid>
-          <StackPanel Margin="10,0,0,0" VerticalAlignment="Center" MaxWidth="360">
-            <TextBlock Text="Window anchor" FontWeight="Bold" />
-            <TextBlock TextWrapping="Wrap" Opacity="0.8"
-                       Text="Sticks the window to a screen edge or corner, also after resizing. Dragging the window releases it." />
+          <DataTemplate x:Key="ColorItem">
+            <StackPanel Orientation="Horizontal">
+              <Border Width="12" Height="12" Margin="0,0,6,0" BorderThickness="1"
+                      BorderBrush="{DynamicResource {x:Static styles:ResourceKeys.BorderBrush}}"
+                      Background="{Binding Brush}" />
+              <TextBlock Text="{Binding Name}" />
+            </StackPanel>
+          </DataTemplate>
+        </WrapPanel.Resources>
+
+        <!-- Region: what is shared -->
+        <Border Style="{StaticResource Section}">
+          <StackPanel>
+            <TextBlock Text="Region" Style="{StaticResource SectionHeader}" />
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+              </Grid.RowDefinitions>
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Size" Style="{StaticResource Label}" />
+              <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,2" HorizontalAlignment="Left"
+                        Text="{Binding Extend}"
+                        ItemsSource="{Binding Resolutions}"
+                        ToolTip="Size of the shared region in pixels; type your own or pick one (list in %AppData%\RegionToShare\resolutions.txt)"
+                        Width="110" IsEditable="True" />
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Aspect ratio" Style="{StaticResource Label}" />
+              <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,2" HorizontalAlignment="Left"
+                        SelectedItem="{Binding AspectRatio, Source={x:Static properties:Settings.Default}}"
+                        ItemsSource="{Binding AspectRatios}"
+                        ToolTip="Keep this aspect ratio while resizing; the width leads, the height follows"
+                        Width="110" />
+              <TextBlock Grid.Row="2" Grid.Column="0" Text="Anchor" Style="{StaticResource Label}" VerticalAlignment="Top" Margin="0,4,8,0" />
+              <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal" Margin="0,2">
+                <UniformGrid x:Name="AnchorGrid" Rows="3" Columns="3" VerticalAlignment="Top"
+                             ToolTip="Stick the window to an edge or corner of the screen; dragging the window releases it">
+                <ToggleButton Tag="0" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
+                  <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Top" />
+                </ToggleButton>
+                <ToggleButton Tag="1" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
+                  <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Center" VerticalAlignment="Top" />
+                </ToggleButton>
+                <ToggleButton Tag="2" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
+                  <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Top" />
+                </ToggleButton>
+                <ToggleButton Tag="3" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
+                  <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Center" />
+                </ToggleButton>
+                <ToggleButton Tag="4" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
+                  <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </ToggleButton>
+                <ToggleButton Tag="5" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
+                  <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                </ToggleButton>
+                <ToggleButton Tag="6" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
+                  <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Left" VerticalAlignment="Bottom" />
+                </ToggleButton>
+                <ToggleButton Tag="7" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
+                  <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+                </ToggleButton>
+                <ToggleButton Tag="8" Style="{StaticResource AnchorButton}" Checked="AnchorButton_Checked" Unchecked="AnchorButton_Unchecked">
+                  <Rectangle Style="{StaticResource AnchorMarker}" HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+                </ToggleButton>
+                </UniformGrid>
+                <TextBlock Margin="8,0,0,0" VerticalAlignment="Center" Opacity="0.8" MaxWidth="200" TextWrapping="Wrap"
+                           Text="Sticks the window to a screen edge or corner, also after resizing. Dragging the window releases it." />
+              </StackPanel>
+            </Grid>
           </StackPanel>
-        </StackPanel>
-      </StackPanel>
+        </Border>
+
+        <!-- Appearance: what viewers see where nothing covers the region -->
+        <Border Style="{StaticResource Section}">
+          <StackPanel>
+            <TextBlock Text="Appearance" Style="{StaticResource SectionHeader}" />
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+              </Grid.RowDefinitions>
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Frame color" Style="{StaticResource Label}" />
+              <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,2" HorizontalAlignment="Left"
+                        SelectedValue="{Binding ThemeColor, Source={x:Static properties:Settings.Default}}"
+                        SelectedValuePath="Name"
+                        ItemsSource="{Binding ThemeColorItems}"
+                        ItemTemplate="{StaticResource ColorItem}"
+                        ToolTip="Color of the region frame stripes and of the UI accents"
+                        Width="120" />
+              <TextBlock Grid.Row="1" Grid.Column="0" Text="Background" Style="{StaticResource Label}" />
+              <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,2" HorizontalAlignment="Left"
+                        SelectedValue="{Binding BackgroundColor, Source={x:Static properties:Settings.Default}}"
+                        SelectedValuePath="Name"
+                        ItemsSource="{Binding BackgroundColorItems}"
+                        ItemTemplate="{StaticResource ColorItem}"
+                        IsEnabled="{Binding IsBackgroundColorEnabled}"
+                        ToolTipService.ShowOnDisabled="True"
+                        ToolTip="{Binding BackgroundColorToolTip}"
+                        Width="120" />
+              <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
+                        Content="Show desktop wallpaper"
+                        ToolTip="Paint the desktop wallpaper where nothing covers the shared region, instead of the background color"
+                        IsChecked="{Binding ShowDesktopWallpaper, Source={x:Static properties:Settings.Default}}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Capture: how the region is recorded -->
+        <Border Style="{StaticResource Section}">
+          <StackPanel>
+            <TextBlock Text="Capture" Style="{StaticResource SectionHeader}" />
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition />
+                <RowDefinition />
+              </Grid.RowDefinitions>
+              <TextBlock Grid.Row="0" Grid.Column="0" Text="Frame rate" Style="{StaticResource Label}" />
+              <ComboBox Grid.Row="0" Grid.Column="1" Margin="0,2" HorizontalAlignment="Left"
+                        SelectedItem="{Binding FramesPerSecond, Source={x:Static properties:Settings.Default}}"
+                        ItemStringFormat="{}{0} FPS"
+                        ItemsSource="{Binding SupportedFramesPerSecond}"
+                        ToolTip="How many times per second the region is captured; higher is smoother but uses more CPU"
+                        Width="80" />
+              <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
+                        Content="Draw mouse cursor"
+                        ToolTip="Screen capture does not include the mouse cursor; this draws it into the shared image"
+                        IsChecked="{Binding DrawShadowCursor, Source={x:Static properties:Settings.Default}}" />
+              <CheckBox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,2"
+                        Content="Start sharing on launch"
+                        ToolTip="Open the region frame immediately when the app starts, without clicking the window"
+                        IsChecked="{Binding StartActivated, Source={x:Static properties:Settings.Default}}" />
+            </Grid>
+          </StackPanel>
+        </Border>
+      </WrapPanel>
       <TextBlock Text="{Binding Version}" VerticalAlignment="Bottom" HorizontalAlignment="Right" Padding="5,2" />
       <Grid VerticalAlignment="Center" HorizontalAlignment="Center">
         <Grid.RowDefinitions>

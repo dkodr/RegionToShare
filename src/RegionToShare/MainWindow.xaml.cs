@@ -91,7 +91,32 @@ public partial class MainWindow
         set => SetValue(IsBackgroundColorEnabledProperty, value);
     }
     public static readonly DependencyProperty IsBackgroundColorEnabledProperty = DependencyProperty.Register(
-        nameof(IsBackgroundColorEnabled), typeof(bool), typeof(MainWindow), new PropertyMetadata(true));
+        nameof(IsBackgroundColorEnabled), typeof(bool), typeof(MainWindow), new PropertyMetadata(true, (d, _) => ((MainWindow)d).RefreshBackgroundColorToolTip()));
+
+    private void RefreshBackgroundColorToolTip()
+    {
+        SetValue(BackgroundColorToolTipProperty, BackgroundColorToolTipText);
+    }
+
+    public string BackgroundColorToolTip
+    {
+        get => (string)GetValue(BackgroundColorToolTipProperty);
+        set => SetValue(BackgroundColorToolTipProperty, value);
+    }
+    public static readonly DependencyProperty BackgroundColorToolTipProperty = DependencyProperty.Register(
+        nameof(BackgroundColorToolTip), typeof(string), typeof(MainWindow), new PropertyMetadata("Color shown where nothing covers the shared region"));
+
+    private string BackgroundColorToolTipText => IsBackgroundColorEnabled
+        ? "Color shown where nothing covers the shared region"
+        : "Not available while \"Show desktop wallpaper\" is on";
+
+    /// <summary>
+    /// Clicks that land on the options panel (labels, gaps, disabled controls) must not start sharing.
+    /// </summary>
+    private void OptionsPanel_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+    }
 
     private void ApplyBackgroundColor()
     {
