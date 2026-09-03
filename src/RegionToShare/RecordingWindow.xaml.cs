@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Interop;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using RegionToShare.Properties;
 using TomsToolbox.Essentials;
 using TomsToolbox.Wpf;
 using static RegionToShare.NativeMethods;
@@ -30,6 +31,8 @@ public partial class RecordingWindow
     private RECT _nativeMainWindowRect;
     private int _timerMutex;
     private IntPtr _windowHandle;
+    private bool _isMoving;
+    private bool _isSizing;
 
     public RecordingWindow(Image renderTarget, bool drawShadowCursor, int framesPerSecond, POINT debugOffset)
     {
@@ -91,6 +94,17 @@ public partial class RecordingWindow
 
     private Thickness NativeBorderSize => DeviceTransformations.ToDevice.Transform(BorderSize);
 
+    private SIZE MinRegionSize
+    {
+        get
+        {
+            var min = DeviceTransformations.ToDevice.Transform(new Vector(_mainWindow.MinWidth, _mainWindow.MinHeight));
+            return new SIZE((int)Math.Ceiling(min.X), (int)Math.Ceiling(min.Y));
+        }
+    }
+
+    private int SnapThresholdPx => (int)Math.Round(DeviceTransformations.ToDevice.Transform(new Vector(WindowGeometry.SnapThreshold, 0)).X);
+
     protected override void OnPropertyChanged(DependencyPropertyChangedEventArgs e)
     {
         base.OnPropertyChanged(e);
@@ -137,6 +151,28 @@ public partial class RecordingWindow
             case WM_NCHITTEST:
                 handled = true;
                 return (IntPtr)NcHitTest(windowHandle, lParam);
+
+            case WM_SIZING:
+                _isSizing = true;
+                handled = true;
+                return WindowGeometry.HandleSizing(windowHandle, wParam, lParam, NativeBorderSize, MinRegionSize, SnapThresholdPx);
+
+            case WM_ENTERSIZEMOVE:
+                _isMoving = false;
+                _isSizing = false;
+                break;
+
+            case WM_MOVING:
+                _isMoving = true;
+                break;
+
+            case WM_EXITSIZEMOVE:
+                // Dragging the frame by hand releases the anchor, like undocking.
+                if (_isMoving && !_isSizing && Settings.Default.WindowAnchor != (int)WindowAnchor.None)
+                {
+                    Settings.Default.WindowAnchor = (int)WindowAnchor.None;
+                }
+                break;
         }
 
         return IntPtr.Zero;

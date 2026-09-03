@@ -22,6 +22,122 @@ public static class NativeMethods
     public const uint SWP_NOZORDER = 0x0004;
 
     public const int WM_NCHITTEST = 0x0084;
+    public const int WM_SIZING = 0x0214;
+    public const int WM_MOVING = 0x0216;
+    public const int WM_ENTERSIZEMOVE = 0x0231;
+    public const int WM_EXITSIZEMOVE = 0x0232;
+
+    public const int WMSZ_LEFT = 1;
+    public const int WMSZ_RIGHT = 2;
+    public const int WMSZ_TOP = 3;
+    public const int WMSZ_TOPLEFT = 4;
+    public const int WMSZ_TOPRIGHT = 5;
+    public const int WMSZ_BOTTOM = 6;
+    public const int WMSZ_BOTTOMLEFT = 7;
+    public const int WMSZ_BOTTOMRIGHT = 8;
+
+    public const uint MONITOR_DEFAULTTONEAREST = 2;
+
+    public const int GWL_EXSTYLE = -20;
+    public const int WS_EX_TRANSPARENT = 0x20;
+    public const int WS_EX_LAYERED = 0x80000;
+
+    public const int DWMWA_CLOAKED = 14;
+
+    public const uint SPI_GETDESKWALLPAPER = 0x0073;
+    public const int COLOR_BACKGROUND = 1;
+
+    public const int SM_XVIRTUALSCREEN = 76;
+    public const int SM_YVIRTUALSCREEN = 77;
+    public const int SM_CXVIRTUALSCREEN = 78;
+    public const int SM_CYVIRTUALSCREEN = 79;
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MONITORINFO
+    {
+        public int cbSize;
+        public RECT rcMonitor;
+        public RECT rcWork;
+        public uint dwFlags;
+
+        public static MONITORINFO Default => new() { cbSize = Marshal.SizeOf<MONITORINFO>() };
+    }
+
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr MonitorFromRect([In] ref RECT lprc, uint dwFlags);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetMonitorInfo(IntPtr hMonitor, ref MONITORINFO lpmi);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsWindowVisible(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ClientToScreen(IntPtr hWnd, ref POINT lpPoint);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SystemParametersInfo(uint uiAction, uint uiParam, System.Text.StringBuilder pvParam, uint fWinIni);
+
+    [DllImport("user32.dll")]
+    public static extern uint GetSysColor(int nIndex);
+
+    [DllImport("user32.dll")]
+    public static extern int GetSystemMetrics(int nIndex);
+
+    [DllImport("dwmapi.dll", EntryPoint = "DwmGetWindowAttribute")]
+    private static extern int DwmGetWindowAttributeInt(IntPtr hWnd, int dwAttribute, out int pvAttribute, int cbAttribute);
+
+    public static bool IsWindowCloaked(IntPtr hWnd)
+    {
+        return DwmGetWindowAttributeInt(hWnd, DWMWA_CLOAKED, out var cloaked, sizeof(int)) == 0 && cloaked != 0;
+    }
+
+    /// <summary>
+    /// Visible bounds of a window (without the invisible glass frame); falls back to GetWindowRect.
+    /// </summary>
+    public static bool TryGetVisibleWindowRect(IntPtr hWnd, out RECT rect)
+    {
+        rect = new RECT();
+
+        if (DwmGetWindowAttributeRect(hWnd, DWMWA_EXTENDED_FRAME_BOUNDS, ref rect, Marshal.SizeOf<RECT>()) == 0)
+            return true;
+
+        return GetWindowRect(hWnd, out rect);
+    }
+
+    public static bool TryGetMonitorInfo(IntPtr hWnd, out MONITORINFO info)
+    {
+        info = MONITORINFO.Default;
+        var monitor = MonitorFromWindow(hWnd, MONITOR_DEFAULTTONEAREST);
+        return monitor != IntPtr.Zero && GetMonitorInfo(monitor, ref info);
+    }
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -59,6 +175,43 @@ public static class NativeMethods
 
         public int Height => Bottom - Top;
 
+        public bool IsEmpty => Width <= 0 || Height <= 0;
+
+        public RECT Intersect(RECT other)
+        {
+            return new RECT
+            {
+                Left = Math.Max(Left, other.Left),
+                Top = Math.Max(Top, other.Top),
+                Right = Math.Min(Right, other.Right),
+                Bottom = Math.Min(Bottom, other.Bottom)
+            };
+        }
+
+        public RECT Offset(int dx, int dy)
+        {
+            return new RECT { Left = Left + dx, Top = Top + dy, Right = Right + dx, Bottom = Bottom + dy };
+        }
+
+        public bool Equals(RECT other)
+        {
+            return Left == other.Left && Top == other.Top && Right == other.Right && Bottom == other.Bottom;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is RECT other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return Left ^ (Top << 8) ^ (Right << 16) ^ (Bottom << 24);
+        }
+
+        public static bool operator ==(RECT a, RECT b) => a.Equals(b);
+
+        public static bool operator !=(RECT a, RECT b) => !a.Equals(b);
+
         public static RECT operator +(RECT rect, Thickness borderSize)
         {
             return new RECT
@@ -86,7 +239,7 @@ public static class NativeMethods
             return new RECT
             {
                 Left = rect.Left + offset.X,
-                Top = rect.Top += offset.Y,
+                Top = rect.Top + offset.Y,
                 Right = rect.Right + offset.X,
                 Bottom = rect.Bottom + offset.Y
             };
@@ -97,7 +250,7 @@ public static class NativeMethods
             return new RECT
             {
                 Left = rect.Left - offset.X,
-                Top = rect.Top -= offset.Y,
+                Top = rect.Top - offset.Y,
                 Right = rect.Right - offset.X,
                 Bottom = rect.Bottom - offset.Y
             };

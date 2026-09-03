@@ -4,8 +4,10 @@ using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using RegionToShare.Properties;
@@ -27,6 +29,9 @@ public partial class MainWindow
 
     private POINT _debugOffset;
 
+    private bool _isMoving;
+    private bool _isSizing;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -36,6 +41,7 @@ public partial class MainWindow
         Resources.RegisterDefaultStyles();
         SetThemeColor();
         Settings.PropertyChanged += Settings_PropertyChanged;
+        RefreshAnchorButtons();
     }
 
     public string Version => Assembly.GetExecutingAssembly().GetName().Version.ToString();
@@ -43,6 +49,8 @@ public partial class MainWindow
     public ICollection<string> Resolutions { get; }
 
     public static ICollection<int> SupportedFramesPerSecond { get; } = new[] { 5, 10, 15, 20, 30, 60 };
+
+    public static ICollection<string> AspectRatios => AspectRatio.Supported;
 
     internal Settings Settings => Settings.Default;
 
@@ -68,8 +76,138 @@ public partial class MainWindow
         if (newValue is null || !TryParseSize(newValue, out var size))
             return;
 
+        if (_recordingWindow == null && WindowState == WindowState.Normal)
+        {
+            if (AspectRatio.TryParse(Settings.AspectRatio, out var ratio))
+            {
+                size = AspectRatio.Adjust(size, ratio, false, MinRegionSize);
+            }
+
+            ApplyRegionSize(size);
+            return;
+        }
+
         size += GlassFrameThickness;
         SetWindowPos(_windowHandle, IntPtr.Zero, 0, 0, size.Width, size.Height, SWP_NOACTIVATE | SWP_NOZORDER | SWP_NOMOVE);
+    }
+
+    private Transformations DeviceTransformations => (HwndSource.FromHwnd(_windowHandle)?.CompositionTarget).GetDeviceTransformations();
+
+    private SIZE MinRegionSize
+    {
+        get
+        {
+            var min = DeviceTransformations.ToDevice.Transform(new Vector(MinWidth, MinHeight));
+            return new SIZE((int)Math.Ceiling(min.X), (int)Math.Ceiling(min.Y));
+        }
+    }
+
+    private int SnapThresholdPx => (int)Math.Round(DeviceTransformations.ToDevice.Transform(new Vector(WindowGeometry.SnapThreshold, 0)).X);
+
+    /// <summary>
+    /// Resizes the region (window without the glass frame) and re-applies the anchor; no-op when nothing changes.
+    /// While recording the recording window owns the geometry.
+    /// </summary>
+    private void ApplyRegionSize(SIZE regionSize)
+    {
+        if (_windowHandle == IntPtr.Zero || _recordingWindow != null || WindowState != WindowState.Normal)
+            return;
+
+        var glass = GlassFrameThickness;
+        var current = NativeWindowRect;
+        var size = regionSize + glass;
+        var rect = new RECT { Left = current.Left, Top = current.Top, Right = current.Left + size.Width, Bottom = current.Top + size.Height };
+
+        if (TryGetMonitorInfo(_windowHandle, out var monitor))
+        {
+            rect = WindowGeometry.ApplyAnchor(rect, glass, monitor.rcWork, WindowGeometry.CurrentAnchor);
+        }
+
+        if (rect == current)
+            return;
+
+        NativeWindowRect = rect;
+    }
+
+    private void ApplyAspectRatioNow()
+    {
+        if (_windowHandle == IntPtr.Zero)
+            return;
+
+        var region = NativeWindowRect - GlassFrameThickness;
+        var size = new SIZE(region.Width, region.Height);
+
+        if (AspectRatio.TryParse(Settings.AspectRatio, out var ratio))
+        {
+            size = AspectRatio.Adjust(size, ratio, false, MinRegionSize);
+        }
+
+        ApplyRegionSize(size);
+    }
+
+    private void ApplyAnchorNow()
+    {
+        if (_windowHandle == IntPtr.Zero)
+            return;
+
+        var region = NativeWindowRect - GlassFrameThickness;
+        ApplyRegionSize(new SIZE(region.Width, region.Height));
+    }
+
+    private void ReleaseAnchor()
+    {
+        if (Settings.WindowAnchor != (int)WindowAnchor.None)
+        {
+            Settings.WindowAnchor = (int)WindowAnchor.None;
+        }
+    }
+
+    private void AnchorButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton { Tag: string tag } button || !int.TryParse(tag, NumberStyles.Integer, CultureInfo.InvariantCulture, out var anchor))
+            return;
+
+        Settings.WindowAnchor = button.IsChecked == true ? anchor : (int)WindowAnchor.None;
+    }
+
+    private void RefreshAnchorButtons()
+    {
+        var anchor = Settings.WindowAnchor;
+
+        foreach (var button in AnchorGrid.Children.OfType<ToggleButton>())
+        {
+            button.IsChecked = button.Tag is string tag && int.TryParse(tag, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) && value == anchor;
+        }
+    }
+
+    private IntPtr WindowProc(IntPtr windowHandle, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        switch (msg)
+        {
+            case WM_SIZING:
+                _isSizing = true;
+                handled = true;
+                return WindowGeometry.HandleSizing(windowHandle, wParam, lParam, GlassFrameThickness, MinRegionSize, SnapThresholdPx);
+
+            case WM_ENTERSIZEMOVE:
+                _isMoving = false;
+                _isSizing = false;
+                break;
+
+            case WM_MOVING:
+                _isMoving = true;
+                break;
+
+            case WM_EXITSIZEMOVE:
+                // Dragging the window by hand releases the anchor, like undocking.
+                if (_isMoving && !_isSizing)
+                {
+                    ReleaseAnchor();
+                }
+                break;
+        }
+
+        return IntPtr.Zero;
     }
 
     internal Thickness GlassFrameThickness => DwmGetExtendedFrameBounds(_windowHandle);
@@ -124,6 +262,7 @@ public partial class MainWindow
         base.OnSourceInitialized(e);
 
         _windowHandle = this.GetWindowHandle();
+        HwndSource.FromHwnd(_windowHandle)?.AddHook(WindowProc);
 
         var separationLayerWindow = new Window()
         {
@@ -159,6 +298,7 @@ public partial class MainWindow
                 }
 
                 UpdateSizeAndPos();
+                ApplyAnchorNow();
 
                 if (Settings.StartActivated)
                 {
@@ -249,6 +389,16 @@ public partial class MainWindow
 
             settings.FramesPerSecond = SupportedFramesPerSecond.Contains(settings.FramesPerSecond) ? settings.FramesPerSecond : 15;
 
+            if (!AspectRatio.IsValid(settings.AspectRatio))
+            {
+                settings.AspectRatio = AspectRatio.Free;
+            }
+
+            if (!WindowGeometry.IsValidAnchor(settings.WindowAnchor))
+            {
+                settings.WindowAnchor = (int)WindowAnchor.None;
+            }
+
             try
             {
                 ColorConverter.ConvertFromString(settings.ThemeColor);
@@ -276,9 +426,20 @@ public partial class MainWindow
 
     private void Settings_PropertyChanged(object sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(Settings.ThemeColor))
+        switch (e.PropertyName)
         {
-            SetThemeColor();
+            case nameof(Settings.ThemeColor):
+                SetThemeColor();
+                break;
+
+            case nameof(Settings.AspectRatio):
+                ApplyAspectRatioNow();
+                break;
+
+            case nameof(Settings.WindowAnchor):
+                RefreshAnchorButtons();
+                ApplyAnchorNow();
+                break;
         }
     }
 
