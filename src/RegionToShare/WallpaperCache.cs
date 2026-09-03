@@ -259,19 +259,25 @@ public sealed class WallpaperCache : IDisposable
                 break;
 
             default: // Fill
-                DrawScaled(graphics, image, new Rectangle(0, 0, monitor.Width, monitor.Height), Math.Max((double)monitor.Width / imageWidth, (double)monitor.Height / imageHeight));
+                DrawScaled(graphics, image, new Rectangle(0, 0, monitor.Width, monitor.Height), Math.Max((double)monitor.Width / imageWidth, (double)monitor.Height / imageHeight), true);
                 break;
         }
 
         return bitmap;
     }
 
-    private static void DrawScaled(Graphics graphics, Image image, Rectangle canvas, double scale)
+    private static void DrawScaled(Graphics graphics, Image image, Rectangle canvas, double scale, bool fillCrop = false)
     {
         var width = (int)Math.Round(image.Width * scale);
         var height = (int)Math.Round(image.Height * scale);
         var x = canvas.Left + (canvas.Width - width) / 2;
         var y = canvas.Top + (canvas.Height - height) / 2;
+
+        if (fillCrop && height > canvas.Height)
+        {
+            // Measured on Windows 11: "Fill" does not center the vertical overflow, it keeps one third of it above and two thirds below.
+            y = canvas.Top - (height - canvas.Height) / 3;
+        }
 
         graphics.DrawImage(image, new Rectangle(x, y, width, height));
     }
