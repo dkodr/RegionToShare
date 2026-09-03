@@ -2,7 +2,6 @@
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using static RegionToShare.NativeMethods;
@@ -167,43 +166,11 @@ public sealed class WallpaperCache : IDisposable
         var wallpaper = DesktopWallpaper.GetForMonitor(info.rcMonitor);
         var bitmap = Render(wallpaper, info.rcMonitor);
 
-        WriteDiagnostics(monitorHandle, info, wallpaper);
 
         entry = new MonitorEntry(info.rcMonitor, wallpaper, bitmap);
         _monitors.Add(monitorHandle, entry);
 
         return entry;
-    }
-
-    [DllImport("shcore.dll")]
-    private static extern int GetDpiForMonitor(IntPtr hMonitor, int dpiType, out uint dpiX, out uint dpiY);
-
-    /// <summary>
-    /// One line per rendered monitor in %AppData%\RegionToShare\wallpaper.log, to diagnose scaling differences.
-    /// </summary>
-    private static void WriteDiagnostics(IntPtr monitorHandle, MONITORINFO info, WallpaperInfo wallpaper)
-    {
-        try
-        {
-            uint dpiX = 0, dpiY = 0;
-            GetDpiForMonitor(monitorHandle, 0, out dpiX, out dpiY);
-
-            var imageSize = "n/a";
-            using (var image = LoadImage(wallpaper.Path))
-            {
-                if (image != null)
-                    imageSize = image.Width + "x" + image.Height;
-            }
-
-            var line = $"{DateTime.Now:HH:mm:ss} monitor {info.rcMonitor} work {info.rcWork} dpi {dpiX} position {wallpaper.Position} color {wallpaper.BackgroundColor.Name} image {imageSize} path {wallpaper.Path}";
-            var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "RegionToShare");
-            Directory.CreateDirectory(dir);
-            File.AppendAllLines(Path.Combine(dir, "wallpaper.log"), new[] { line });
-        }
-        catch
-        {
-            // diagnostics only
-        }
     }
 
     private static Bitmap Render(WallpaperInfo wallpaper, RECT monitor)
