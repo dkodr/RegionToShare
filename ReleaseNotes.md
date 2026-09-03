@@ -4,7 +4,7 @@
 - Aspect ratio lock (16:9, 3:2, 4:3), applied while resizing and when a resolution is entered; window edges snap to the screen edges while resizing.
 - Fix #85: the dotted background pattern is gone; the background is a solid color chosen from a list of pastel colors (default black). The theme color is chosen from a list of five vivid colors.
 - Fix #45: the main window is sent back behind the region again when a meeting app changes the window order.
-- More predefined resolutions (1280x720, 1600x900, 2560x1440, 3840x2160), merged into an existing resolutions.txt.
+- More predefined resolutions (1280x720, 1600x900, 2560x1440, 3200x1800, 3840x2160), merged into an existing resolutions.txt.
 
 1.11
 - Fix #80: Support native ARM64, contributed by Stefan Forstenlechner <stefan@forstenlechner.dev>

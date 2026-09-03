@@ -409,7 +409,7 @@ public partial class MainWindow
 
     private ICollection<string> LoadResolutions()
     {
-        var defaultResolutions = new[] { @"1024x782", @"1280x720", @"1280x1024", @"1600x900", @"1920x1080", @"2560x1440", @"3840x2160" };
+        var defaultResolutions = new[] { @"1024x782", @"1280x720", @"1280x1024", @"1600x900", @"1920x1080", @"2560x1440", @"3200x1800", @"3840x2160" };
 
         try
         {
